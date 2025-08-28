@@ -20,6 +20,57 @@ from shapely.geometry import Point
 from datetime import datetime
 import numpy as np
 
+
+
+##### insert 
+
+
+#Required input information
+# directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_10__test_new_code_order" #Change directory and new folder name to save data
+directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_10_moisture_status_test_new_code_order" #Change directory and new folder name to save data
+#directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_3_soil_moisture_root_zone" #Change directory and new folder name to save data
+os.makedirs(directory, exist_ok=True)
+
+
+client_id = 'USR.GHx3N2K9D3w7N9Kdm7Zrn5xWTMqVzoyX'  #Change API Key/Client ID (token)
+client_secret = 'e5jPjWd4bbfYmJwkpJ8nVRNiQvfYaTFETrJsvrdMgNWUahVssRKK7wT3LAbZP3u8' #Change API Password/Client Secret (token)
+
+# headers = get_headers(client_id, client_secret)
+
+company_uuid = 'ab068aef-6798-44bb-a62c-4ba763081d45' #'dd7c27f9-3ede-4c5a-a6a1-d61ea6325ea1' #Change Company UUID of interest
+company_name = 'Weenat' #Change Company account name
+
+# orders = get_orders(company_uuid, headers)
+
+order_list = [
+    (36813, '45b364aa-b36b-4db6-96b8-de543b5f7d72'), #Change Order UUID of interest (1)
+]
+
+startdate = '2025-04-01' #Change Start date of period of interest
+enddate = '2025-04-06' #Change End date of period of interest
+# dates = pd.date_range(startdate, enddate, freq="D")
+
+
+band_number = 10
+
+# add the coordinates of the locations you want the pixel values
+
+points =[(48.789970, 4.171820), # plot 1 sensor
+(50.40315, 1.83787), # plot 2 - W700329 30cm sensor
+(50.40332, 1.83813), # plot 2 - W700A5A 30cm sensor
+(50.403517, 1.83775), # plot 2 - 2082E28 30cm sensor
+(50.40335, 1.837467), # plot 2 - 2089DDE 30cm sensor
+(50.40335, 1.83745), # plot 2 - 201B83 60cm sensor
+(50.40317, 1.8378), # plot 2 - W7007B5 60cm sensor 
+(50.403367, -1.838117)] # plot 2 - 1B2659 60cm sensor
+
+output_csv = os.path.join(directory, f"band{band_number}_values.csv") #(optional) Change CSV output name
+
+##########
+
+
+
+
 #Building bridge with IrriWatch API - token (IGNORE)
 def get_headers(client_id, client_secret):
     login_details = {'grant_type': 'client_credentials',
@@ -82,11 +133,11 @@ def download_tiffs(date, directory, company_uuid, order_number, order_uuid, head
             for file in os.listdir(temp_extract_path):
                 if file.endswith(".tif"):
                     input_tiff_path = os.path.join(temp_extract_path, file)
-                    output_tiff_path = os.path.join(path_to_save, f"{file[:-4]}_band3.tif")
+                    output_tiff_path = os.path.join(path_to_save, f"{file[:-4]}_band{band_number}.tif")
 
                     dataset = gdal.Open(input_tiff_path)
-                    if dataset is not None and dataset.RasterCount >= 3: #Provide here preferred band
-                        band3 = dataset.GetRasterBand(3).ReadAsArray() #Provide here preferred band
+                    if dataset is not None and dataset.RasterCount >= band_number: #Provide here preferred band
+                        selected_band = dataset.GetRasterBand(band_number).ReadAsArray() #Provide here preferred band
                         driver = gdal.GetDriverByName("GTiff")
                         out_dataset = driver.Create(output_tiff_path, dataset.RasterXSize, dataset.RasterYSize, 1,
                                                     gdal.GDT_Float32)
@@ -97,7 +148,7 @@ def download_tiffs(date, directory, company_uuid, order_number, order_uuid, head
                         if not projection:
                             projection = 'EPSG:4326'
                         out_dataset.SetProjection(projection)
-                        out_dataset.GetRasterBand(1).WriteArray(band3)
+                        out_dataset.GetRasterBand(1).WriteArray(selected_band)
                         out_dataset.FlushCache()
                         out_dataset = None
                         dataset = None
@@ -131,13 +182,13 @@ def create_point_shapefile(points, directory):
     print(f"Shapefile created with {len(points)} points: {shapefile_path}")
 
 #Extract pixel values of coordinates (Option to change TIFF name band)
-def extract_band3_values(points, directory, output_csv):
+def extract_selected_band_values(points, directory, output_csv):
 
     results = []
 
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith("_band3.tif"): #Provide here preferred band
+            if file.endswith(f"_band{band_number}.tif"): #Provide here preferred band
                 tiff_path = os.path.join(root, file)
                 dataset = gdal.Open(tiff_path)
                 if dataset is None:
@@ -172,7 +223,7 @@ def extract_band3_values(points, directory, output_csv):
                             'Latitude': lat,
                             'Longitude': lon,
                             'Date': formatted_date,
-                            'Band3_Value': value #Change preferred band name
+                            f'Band{band_number}_Value': value #Change preferred band name
                         })
 
                 dataset = None
@@ -180,42 +231,43 @@ def extract_band3_values(points, directory, output_csv):
     # Save to CSV
     df = pd.DataFrame(results)
     df.to_csv(output_csv, index=False)
-    print(f"Band 3 values extracted and saved to {output_csv}")
+    print(f"Band {band_number} values extracted and saved to {output_csv}")
 
 
 # ------------------ Main Execution ------------------------
 
-#Required input information
-#directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band9_soil_water_potential_test" #Change directory and new folder name to save data
-directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band3_soil_moisture_root_zone" #Change directory and new folder name to save data
-os.makedirs(directory, exist_ok=True)
+# #Required input information
+# directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_9_soil_water_potential" #Change directory and new folder name to save data
+# #directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_3_soil_moisture_root_zone" #Change directory and new folder name to save data
+# os.makedirs(directory, exist_ok=True)
 
-client_id = 'USR.GHx3N2K9D3w7N9Kdm7Zrn5xWTMqVzoyX'  #Change API Key/Client ID (token)
-client_secret = 'e5jPjWd4bbfYmJwkpJ8nVRNiQvfYaTFETrJsvrdMgNWUahVssRKK7wT3LAbZP3u8' #Change API Password/Client Secret (token)
+# client_id = 'USR.GHx3N2K9D3w7N9Kdm7Zrn5xWTMqVzoyX'  #Change API Key/Client ID (token)
+# client_secret = 'e5jPjWd4bbfYmJwkpJ8nVRNiQvfYaTFETrJsvrdMgNWUahVssRKK7wT3LAbZP3u8' #Change API Password/Client Secret (token)
 
 headers = get_headers(client_id, client_secret)
 
-company_uuid = 'ab068aef-6798-44bb-a62c-4ba763081d45' #'dd7c27f9-3ede-4c5a-a6a1-d61ea6325ea1' #Change Company UUID of interest
-company_name = 'Weenat' #Change Company account name
+# company_uuid = 'ab068aef-6798-44bb-a62c-4ba763081d45' #'dd7c27f9-3ede-4c5a-a6a1-d61ea6325ea1' #Change Company UUID of interest
+# company_name = 'Weenat' #Change Company account name
 
 orders = get_orders(company_uuid, headers)
 
-order_list = [
-    (36813, '45b364aa-b36b-4db6-96b8-de543b5f7d72'), #Change Order UUID of interest (1)
-]
+# order_list = [
+#     (36813, '45b364aa-b36b-4db6-96b8-de543b5f7d72'), #Change Order UUID of interest (1)
+# ]
 
-startdate = '2025-04-01' #Change Start date of period of interest
-enddate = '2025-08-27' #Change End date of period of interest
+# startdate = '2025-04-01' #Change Start date of period of interest
+# enddate = '2025-04-06' #Change End date of period of interest
+
 dates = pd.date_range(startdate, enddate, freq="D")
 
-points =[(48.789970, 4.171820), # plot 1 sensor
-(50.40315, 1.83787), # plot 2 - W700329 30cm sensor
-(50.40332, 1.83813), # plot 2 - W700A5A 30cm sensor
-(50.403517, 1.83775), # plot 2 - 2082E28 30cm sensor
-(50.40335, 1.837467), # plot 2 - 2089DDE 30cm sensor
-(50.40335, 1.83745), # plot 2 - 201B83 60cm sensor
-(50.40317, 1.8378), # plot 2 - W7007B5 60cm sensor 
-(50.403367, -1.838117)] # plot 2 - 1B2659 60cm sensor
+# points =[(48.789970, 4.171820), # plot 1 sensor
+# (50.40315, 1.83787), # plot 2 - W700329 30cm sensor
+# (50.40332, 1.83813), # plot 2 - W700A5A 30cm sensor
+# (50.403517, 1.83775), # plot 2 - 2082E28 30cm sensor
+# (50.40335, 1.837467), # plot 2 - 2089DDE 30cm sensor
+# (50.40335, 1.83745), # plot 2 - 201B83 60cm sensor
+# (50.40317, 1.8378), # plot 2 - W7007B5 60cm sensor 
+# (50.403367, -1.838117)] # plot 2 - 1B2659 60cm sensor
 
 
 create_point_shapefile(points, directory)
@@ -228,5 +280,5 @@ for order_number, order_uuid in order_list:
 
 print("Download complete.")
 
-output_csv = os.path.join(directory, "band3_values.csv") #Change CSV output name
-extract_band3_values(points, directory, output_csv)
+# output_csv = os.path.join(directory, f"band{band_number}_values.csv") #Change CSV output name
+extract_selected_band_values(points, directory, output_csv)
