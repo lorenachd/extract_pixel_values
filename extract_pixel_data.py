@@ -22,25 +22,20 @@ import numpy as np
 
 
 
-##### insert 
-
+######## add info below
 
 #Required input information
-# directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_10__test_new_code_order" #Change directory and new folder name to save data
 directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_10_moisture_status_test_new_code_order" #Change directory and new folder name to save data
-#directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_3_soil_moisture_root_zone" #Change directory and new folder name to save data
 os.makedirs(directory, exist_ok=True)
 
 
 client_id = 'USR.GHx3N2K9D3w7N9Kdm7Zrn5xWTMqVzoyX'  #Change API Key/Client ID (token)
 client_secret = 'e5jPjWd4bbfYmJwkpJ8nVRNiQvfYaTFETrJsvrdMgNWUahVssRKK7wT3LAbZP3u8' #Change API Password/Client Secret (token)
 
-# headers = get_headers(client_id, client_secret)
 
 company_uuid = 'ab068aef-6798-44bb-a62c-4ba763081d45' #'dd7c27f9-3ede-4c5a-a6a1-d61ea6325ea1' #Change Company UUID of interest
 company_name = 'Weenat' #Change Company account name
 
-# orders = get_orders(company_uuid, headers)
 
 order_list = [
     (36813, '45b364aa-b36b-4db6-96b8-de543b5f7d72'), #Change Order UUID of interest (1)
@@ -48,13 +43,10 @@ order_list = [
 
 startdate = '2025-04-01' #Change Start date of period of interest
 enddate = '2025-04-06' #Change End date of period of interest
-# dates = pd.date_range(startdate, enddate, freq="D")
-
 
 band_number = 10
 
 # add the coordinates of the locations you want the pixel values
-
 points =[(48.789970, 4.171820), # plot 1 sensor
 (50.40315, 1.83787), # plot 2 - W700329 30cm sensor
 (50.40332, 1.83813), # plot 2 - W700A5A 30cm sensor
@@ -67,8 +59,6 @@ points =[(48.789970, 4.171820), # plot 1 sensor
 output_csv = os.path.join(directory, f"band{band_number}_values.csv") #(optional) Change CSV output name
 
 ##########
-
-
 
 
 #Building bridge with IrriWatch API - token (IGNORE)
@@ -236,39 +226,9 @@ def extract_selected_band_values(points, directory, output_csv):
 
 # ------------------ Main Execution ------------------------
 
-# #Required input information
-# directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_9_soil_water_potential" #Change directory and new folder name to save data
-# #directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_3_soil_moisture_root_zone" #Change directory and new folder name to save data
-# os.makedirs(directory, exist_ok=True)
-
-# client_id = 'USR.GHx3N2K9D3w7N9Kdm7Zrn5xWTMqVzoyX'  #Change API Key/Client ID (token)
-# client_secret = 'e5jPjWd4bbfYmJwkpJ8nVRNiQvfYaTFETrJsvrdMgNWUahVssRKK7wT3LAbZP3u8' #Change API Password/Client Secret (token)
-
 headers = get_headers(client_id, client_secret)
-
-# company_uuid = 'ab068aef-6798-44bb-a62c-4ba763081d45' #'dd7c27f9-3ede-4c5a-a6a1-d61ea6325ea1' #Change Company UUID of interest
-# company_name = 'Weenat' #Change Company account name
-
 orders = get_orders(company_uuid, headers)
-
-# order_list = [
-#     (36813, '45b364aa-b36b-4db6-96b8-de543b5f7d72'), #Change Order UUID of interest (1)
-# ]
-
-# startdate = '2025-04-01' #Change Start date of period of interest
-# enddate = '2025-04-06' #Change End date of period of interest
-
 dates = pd.date_range(startdate, enddate, freq="D")
-
-# points =[(48.789970, 4.171820), # plot 1 sensor
-# (50.40315, 1.83787), # plot 2 - W700329 30cm sensor
-# (50.40332, 1.83813), # plot 2 - W700A5A 30cm sensor
-# (50.403517, 1.83775), # plot 2 - 2082E28 30cm sensor
-# (50.40335, 1.837467), # plot 2 - 2089DDE 30cm sensor
-# (50.40335, 1.83745), # plot 2 - 201B83 60cm sensor
-# (50.40317, 1.8378), # plot 2 - W7007B5 60cm sensor 
-# (50.403367, -1.838117)] # plot 2 - 1B2659 60cm sensor
-
 
 create_point_shapefile(points, directory)
 
@@ -280,5 +240,4 @@ for order_number, order_uuid in order_list:
 
 print("Download complete.")
 
-# output_csv = os.path.join(directory, f"band{band_number}_values.csv") #Change CSV output name
 extract_selected_band_values(points, directory, output_csv)
