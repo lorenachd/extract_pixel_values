@@ -19,19 +19,19 @@ import geopandas as gpd
 from shapely.geometry import Point
 from datetime import datetime
 import numpy as np
-
+from functools import reduce
 
 
 ######## add info below
 
 #Required input information
-directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_10_moisture_status_test_new_code_order" #Change directory and new folder name to save data
+directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_10_moisture_status_test_new_code_order_multiband" #Change directory and new folder name to save data
 os.makedirs(directory, exist_ok=True)
 
-client_id = 'USR.GHx3N2K9D3w7N9Kdm7Zrn5xWTMqVzoyX'  #Change API Key/Client ID (token)
-client_secret = 'e5jPjWd4bbfYmJwkpJ8nVRNiQvfYaTFETrJsvrdMgNWUahVssRKK7wT3LAbZP3u8' #Change API Password/Client Secret (token)
+client_id = 'USR.P4fwj3qwfNUzPGhxejryEYWzDV7FZ5PT'  #Change API Key/Client ID (token) 
+client_secret = 'hm9zSV9Y6FZsdR9gLFthZ7VrwHUpTBsuQYQNLJadHLAGqqffbM7VQMoyHZLwgGei' #Change API Password/Client Secret (token)
 
-company_uuid = 'ab068aef-6798-44bb-a62c-4ba763081d45' #'dd7c27f9-3ede-4c5a-a6a1-d61ea6325ea1' #Change Company UUID of interest
+company_uuid = 'ab068aef-6798-44bb-a62c-4ba763081d45'  #Change Company UUID of interest
 company_name = 'Weenat' #Change Company account name
 
 order_list = [
@@ -39,9 +39,9 @@ order_list = [
 ]
 
 startdate = '2025-04-01' #Change Start date of period of interest
-enddate = '2025-04-06' #Change End date of period of interest
+enddate = '2025-04-04' #Change End date of period of interest
 
-band_number = 10
+band_number = [3,4] # add here one or more band numbers inside the brackets. must be a list. e.g. [3] (if only one band) or [1,2,3,4,5,6] (if multiple bands). DON'T REMOVE THE BRACKETS EVEN IF YOU WANT ONLY ONE BAND!!  
 
 # add the coordinates of the locations you want the pixel values
 points =[(48.789970, 4.171820), # plot 1 sensor
@@ -53,7 +53,7 @@ points =[(48.789970, 4.171820), # plot 1 sensor
 (50.40317, 1.8378), # plot 2 - W7007B5 60cm sensor 
 (50.403367, -1.838117)] # plot 2 - 1B2659 60cm sensor
 
-output_csv = os.path.join(directory, f"band{band_number}_values.csv") #(optional) Change CSV output name
+
 
 ##########
 
@@ -93,6 +93,7 @@ def get_orders(company_uuid, headers):
 def download_tiffs(date, directory, company_uuid, order_number, order_uuid, headers):
     url_result_uuids = f"https://api.irriwatch.hydrosat.com/api/v1/company/{company_uuid}/order/{order_uuid}/result"
     result_uuids_response = requests.get(url=url_result_uuids, headers=headers)
+    # band_number = band_number
 
     if result_uuids_response.status_code != 200:
         print(f"Failed to retrieve results for order {order_uuid}. Status code: {result_uuids_response.status_code}")
@@ -117,28 +118,31 @@ def download_tiffs(date, directory, company_uuid, order_number, order_uuid, head
 
             zipfile_data.extractall(temp_extract_path)
 
+             # it was single band value, an integer, but now its a list with more than one band number: https://stackoverflow.com/questions/60504217/typeerror-not-supported-between-instances-of-list-and-int
             for file in os.listdir(temp_extract_path):
-                if file.endswith(".tif"):
-                    input_tiff_path = os.path.join(temp_extract_path, file)
-                    output_tiff_path = os.path.join(path_to_save, f"{file[:-4]}_band{band_number}.tif")
-
-                    dataset = gdal.Open(input_tiff_path)
-                    if dataset is not None and dataset.RasterCount >= band_number: #Provide here preferred band
-                        selected_band = dataset.GetRasterBand(band_number).ReadAsArray() #Provide here preferred band
-                        driver = gdal.GetDriverByName("GTiff")
-                        out_dataset = driver.Create(output_tiff_path, dataset.RasterXSize, dataset.RasterYSize, 1,
-                                                    gdal.GDT_Float32)
-
-                        # Copy georeferencing
-                        out_dataset.SetGeoTransform(dataset.GetGeoTransform())
-                        projection = dataset.GetProjection()
-                        if not projection:
-                            projection = 'EPSG:4326'
-                        out_dataset.SetProjection(projection)
-                        out_dataset.GetRasterBand(1).WriteArray(selected_band)
-                        out_dataset.FlushCache()
-                        out_dataset = None
-                        dataset = None
+                for band_nb in band_number:
+                    if file.endswith(".tif"):
+                        input_tiff_path = os.path.join(temp_extract_path, file)
+                        output_tiff_path = os.path.join(path_to_save, f"{file[:-4]}_band{band_nb}.tif")
+    
+                     
+                        dataset = gdal.Open(input_tiff_path)
+                        if dataset is not None and dataset.RasterCount >= band_nb: #Provide here preferred band
+                            selected_band = dataset.GetRasterBand(band_nb).ReadAsArray() #Provide here preferred band
+                            driver = gdal.GetDriverByName("GTiff")
+                            out_dataset = driver.Create(output_tiff_path, dataset.RasterXSize, dataset.RasterYSize, 1,
+                                                        gdal.GDT_Float32)
+    
+                            # Copy georeferencing
+                            out_dataset.SetGeoTransform(dataset.GetGeoTransform())
+                            projection = dataset.GetProjection()
+                            if not projection:
+                                projection = 'EPSG:4326'
+                            out_dataset.SetProjection(projection)
+                            out_dataset.GetRasterBand(1).WriteArray(selected_band)
+                            out_dataset.FlushCache()
+                            out_dataset = None
+                            dataset = None
 
             # Clean temp
             for file in os.listdir(temp_extract_path):
@@ -168,58 +172,67 @@ def create_point_shapefile(points, directory):
     gdf.to_file(shapefile_path, driver='ESRI Shapefile')
     print(f"Shapefile created with {len(points)} points: {shapefile_path}")
 
+
 #Extract pixel values of coordinates (Option to change TIFF name band)
 def extract_selected_band_values(points, directory, output_csv):
+    all_results = []
 
-    results = []
+    for band_nb in band_number:
+        band_results = []
 
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            if file.endswith(f"_band{band_number}.tif"): #Provide here preferred band
-                tiff_path = os.path.join(root, file)
-                dataset = gdal.Open(tiff_path)
-                if dataset is None:
-                    continue
+        for root, dirs, files in os.walk(directory):
+            for file in files:
+                if file.endswith(f"_band{band_nb}.tif"): # here preferred band
+                    tiff_path = os.path.join(root, file)
+                    dataset = gdal.Open(tiff_path)
+                    if dataset is None:
+                        continue
+                    
+                    # Extract date from folder name
+                    date_folder = os.path.basename(os.path.dirname(tiff_path))
+                    if not date_folder.isdigit():
+                        continue
+                    
+                    # Convert '20250316' → '2025-03-16'
+                    formatted_date = datetime.strptime(date_folder, '%Y%m%d').strftime('%Y-%m-%d')
 
-                # Extract date from folder name
-                date_folder = os.path.basename(os.path.dirname(tiff_path))
-                if not date_folder.isdigit():
-                    continue
+                    gt = dataset.GetGeoTransform()
+                    band = dataset.GetRasterBand(1)
+                    band_data = band.ReadAsArray()
+                    nodata = band.GetNoDataValue()
 
-                # Convert '20250316' → '2025-03-16'
-                formatted_date = datetime.strptime(date_folder, '%Y%m%d').strftime('%Y-%m-%d')
+                    for lat, lon in points:
+                        # Convert geo coords to pixel coords
+                        px = int((lon - gt[0]) / gt[1])
+                        py = int((lat - gt[3]) / gt[5])
 
-                gt = dataset.GetGeoTransform()
-                band = dataset.GetRasterBand(1)
-                band_data = band.ReadAsArray()
-                nodata = band.GetNoDataValue()
+                        if (0 <= px < dataset.RasterXSize) and (0 <= py < dataset.RasterYSize):
+                            value = band_data[py, px]
+                            if nodata is not None and value == nodata:
+                                continue
+                            if np.isnan(value):
+                                continue
 
-                for lat, lon in points:
-                    # Convert geo coords to pixel coords
-                    px = int((lon - gt[0]) / gt[1])
-                    py = int((lat - gt[3]) / gt[5])
+                            band_results.append({
+                                'Latitude': lat,
+                                'Longitude': lon,
+                                'Date': formatted_date,
+                                f'Band{band_nb}_Value': value # band column name
+                            })
 
-                    if (0 <= px < dataset.RasterXSize) and (0 <= py < dataset.RasterYSize):
-                        value = band_data[py, px]
-                        if nodata is not None and value == nodata:
-                            continue
-                        if np.isnan(value):
-                            continue
+                    dataset = None
 
-                        results.append({
-                            'Latitude': lat,
-                            'Longitude': lon,
-                            'Date': formatted_date,
-                            f'Band{band_number}_Value': value #Change preferred band name
-                        })
-
-                dataset = None
+        # Convert to df and append to all_results
+        df_band = pd.DataFrame(band_results)
+        all_results.append(df_band)
+        
+    #https://stackoverflow.com/questions/44327999/how-to-merge-multiple-dataframes    
+    # Merge all band dfs
+    df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date', 'Latitude', 'Longitude'], how='outer'), all_results)
 
     # Save to CSV
-    df = pd.DataFrame(results)
-    df.to_csv(output_csv, index=False)
-    print(f"Band {band_number} values extracted and saved to {output_csv}")
-
+    df_merged.to_csv(output_csv, index=False)
+    print(f"All band values extracted and saved to {output_csv}")
 
 # ------------------ Main Execution ------------------------
 
@@ -237,4 +250,11 @@ for order_number, order_uuid in order_list:
 
 print("Download complete.")
 
+
+
+band_str = "_".join(map(str, band_number))
+output_csv = os.path.join(directory, f"band_{band_str}_values_test_merge.csv")
 extract_selected_band_values(points, directory, output_csv)
+
+# output_csv = os.path.join(directory, f"band{band_number}_values_test_merge.csv") #(optional) Change CSV output name
+# extract_selected_band_values(points, directory, output_csv)
