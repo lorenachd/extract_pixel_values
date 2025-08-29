@@ -2,10 +2,10 @@
 """
 Created on Wed Aug 27 10:30:39 2025
 
-@author: lorena
+@author: lorena carpes (aded the download of multiple bands in the original script)
 """
 
-# extract pixel data:
+# extract pixel data from one or multiple bands:
     
 #Ensure these packages are installed
 import os
@@ -22,10 +22,10 @@ import numpy as np
 from functools import reduce
 
 
-######## add info below
+######## add required info below
 
 #Required input information
-directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_10_moisture_status_test_new_code_order_multiband" #Change directory and new folder name to save data
+directory = r"C:\Users\marta\OneDrive - Hydrosat\lorena_one_drive\tasks_od\roula\0827_Weenat\data_band_3_soil_moist_root_zone_9_soil_wat_pot" #Change directory and new folder name to save data
 os.makedirs(directory, exist_ok=True)
 
 client_id = 'USR.P4fwj3qwfNUzPGhxejryEYWzDV7FZ5PT'  #Change API Key/Client ID (token) 
@@ -39,9 +39,9 @@ order_list = [
 ]
 
 startdate = '2025-04-01' #Change Start date of period of interest
-enddate = '2025-04-04' #Change End date of period of interest
+enddate = '2025-08-28' #Change End date of period of interest
 
-band_number = [3,4] # add here one or more band numbers inside the brackets. must be a list. e.g. [3] (if only one band) or [1,2,3,4,5,6] (if multiple bands). DON'T REMOVE THE BRACKETS EVEN IF YOU WANT ONLY ONE BAND!!  
+band_number = [3,9] # add here one or more band numbers inside the brackets. must be a list. e.g. [3] (if only one band) or [1,2,3,4,5,6] (if multiple bands). DON'T REMOVE THE BRACKETS EVEN IF YOU WANT ONLY ONE BAND!!  
 
 # add the coordinates of the locations you want the pixel values
 points =[(48.789970, 4.171820), # plot 1 sensor
@@ -53,10 +53,7 @@ points =[(48.789970, 4.171820), # plot 1 sensor
 (50.40317, 1.8378), # plot 2 - W7007B5 60cm sensor 
 (50.403367, -1.838117)] # plot 2 - 1B2659 60cm sensor
 
-
-
 ##########
-
 
 #Building bridge with IrriWatch API - token (IGNORE)
 def get_headers(client_id, client_secret):
@@ -250,10 +247,8 @@ for order_number, order_uuid in order_list:
 
 print("Download complete.")
 
-
-
 band_str = "_".join(map(str, band_number))
-output_csv = os.path.join(directory, f"band_{band_str}_values_test_merge.csv")
+output_csv = os.path.join(directory, f"band_{band_str}_values.csv")
 extract_selected_band_values(points, directory, output_csv)
 
 # output_csv = os.path.join(directory, f"band{band_number}_values_test_merge.csv") #(optional) Change CSV output name
